@@ -1,3 +1,28 @@
 spring:
   application:
     name: task-tracker-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tasktracker
+    username: tasktracker
+    password: tasktracker
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway owns schema; Hibernate only verifies it matches
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:dev-only-change-me-this-is-a-placeholder-secret-key-32bytes+}
+  expiration-ms: 86400000   # 24 hours

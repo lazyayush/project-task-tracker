@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/project-task-tracker.iml" filepath="$PROJECT_DIR$/.idea/project-task-tracker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/task-tracker-backend.main.iml" filepath="$PROJECT_DIR$/.idea/modules/task-tracker-backend.main.iml" />
     </modules>
   </component>
 </project>
