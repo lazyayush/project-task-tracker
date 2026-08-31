@@ -1,6 +1,6 @@
 # AI Prompts
 
-## Establishing Project Governance and Master Workflow
+## 1. Establishing Project Governance and Master Workflow
 
 ### Prompt
 
@@ -77,3 +77,21 @@ The AI accepted all execution constraints, provided a high-level multi-phase imp
 ### Correction
 
 Nothing in the output itself—the response adhered strictly to the requested stop-and-wait behavior.
+
+
+## 2. Debugging: 401 vs. 403 status codes
+
+### Prompt
+
+Reported that all requests to a role-protected endpoint returned 403 Forbidden, including requests with no Authorization header at all (expected 401), and also reported that even a valid token on an authenticated-only endpoint was returning 403.
+
+---
+
+### Output
+
+An explanation that Spring Security's default Http403ForbiddenEntryPoint returns 403 for every access denial unless a real authentication entry point is configured, plus a custom exceptionHandling() block distinguishing authenticationEntryPoint (401) from accessDeniedHandler (403).
+
+---
+
+### Correction
+Applied the fix as given; the 401/403 distinction started working correctly afterward. The suspected separate bug (valid tokens still returning 403 on /api/me) turned out to resolve itself once the entry-point/access-denied handlers were correctly wired — the underlying token validation logic was not actually broken.

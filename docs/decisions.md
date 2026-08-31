@@ -18,3 +18,9 @@
 - **Chose:** Database-level CHECK constraint for user roles (chk_users_role restricting values to 'MANAGER' and 'MEMBER').
 - **Rejected:** Plain unconstrained VARCHAR or application-only Enum mapping without DDL checks.
 - **Why:** Database CHECK constraints prevent invalid or unsupported role strings from entering the system via manual SQL queries, scripts, or external integrations.
+
+## Decision 4
+
+- **Chose:** Allow a user to pick their own role (MANAGER or MEMBER) at registration.
+- **Rejected:** Restricting manager-role accounts to seed data or an invite/promotion flow.
+- **Why:** In a real product, letting any user self-assign MANAGER (with its task-deletion and project-membership powers) would be a genuine privilege-escalation vulnerability. Accepted here as a deliberate simplification since every account in this system is one under the developer's own control for demo purposes.
