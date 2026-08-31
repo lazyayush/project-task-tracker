@@ -95,3 +95,21 @@ An explanation that Spring Security's default Http403ForbiddenEntryPoint returns
 
 ### Correction
 Applied the fix as given; the 401/403 distinction started working correctly afterward. The suspected separate bug (valid tokens still returning 403 on /api/me) turned out to resolve itself once the entry-point/access-denied handlers were correctly wired — the underlying token validation logic was not actually broken.
+
+
+## 3. ProjectService and ProjectController generation
+
+### Prompt
+
+Asked for ProjectService and ProjectController given the confirmed answers: global manager privilege (not owner-scoped), enforced project-key format (2-10 uppercase letters/digits), and a fixed owner (no reassignment after creation).
+
+---
+
+### Output
+
+Delivered full project lifecycle and membership APIs (create, update, archive, restore, add-member, remove-member, list). Includes a dedicated owner-removal guard that blocks removing a project's owner from its membership list—enforced as a direct operational rule stemming from the fixed-owner design constraint.
+
+---
+
+### Correction
+Manual testing via Swagger UI caught an authorization flaw where MEMBER users could pass includeArchived=true on GET /api/projects to view archived projects. The issue stemmed from the controller blindly accepting the query parameter without checking caller permissions. Fixed at the controller/service boundary by deriving the flag server-side (effectiveIncludeArchived = isManager && requestedIncludeArchived), enforcing role restrictions regardless of raw request inputs.

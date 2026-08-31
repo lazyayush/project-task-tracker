@@ -24,3 +24,9 @@
 - **Chose:** Allow a user to pick their own role (MANAGER or MEMBER) at registration.
 - **Rejected:** Restricting manager-role accounts to seed data or an invite/promotion flow.
 - **Why:** In a real product, letting any user self-assign MANAGER (with its task-deletion and project-membership powers) would be a genuine privilege-escalation vulnerability. Accepted here as a deliberate simplification since every account in this system is one under the developer's own control for demo purposes.
+
+## Decision 5
+
+- **Chose:** Global manager privileges (any manager can edit, archive, or manage membership across any project).
+- **Rejected:** Restricting manager administrative actions strictly to projects they personally own.
+- **Why:** Matches the literal spec requirement ("Managers can create and archive projects...") and eliminates redundant ownership-check logic across service layers.

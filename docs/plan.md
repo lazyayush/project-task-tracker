@@ -18,3 +18,21 @@
 
 ### What did you cut when you ran short?
 * **Status:** Nothing cut. Phase 1 (Accounts, roles, and security baseline) is 100% complete and verified.
+
+---
+
+## Phase 2 — Projects Domain & Membership Infrastructure
+
+### How did you break the work into sessions?
+* **Entities & Migrations:** Modeled `Project` and explicit `ProjectMember` entities (capturing `joined_at` for future audit logging) along with Flyway schema scripts.
+* **Service & Authorization Rules:** Defined core domain rules—global manager permissions, fixed project keys, and immutable ownership—before implementing `ProjectService` and `ProjectController` CRUD/membership endpoints.
+* **Tooling & Bug Resolution:** Integrated Swagger/OpenAPI for testing. Diagnosed and fixed a privacy leak where `MEMBER` users could pass `includeArchived=true` to bypass manager-only visibility constraints.
+
+### What order did you build in, and why that order?
+1. **Schema & Persistence (`Project` / `ProjectMember`):** Built entities and Flyway migrations first to establish referential constraints and explicit join relationships.
+2. **Business Logic & Layered Security:** Built `ProjectService` next to enforce fine-grained data checks (membership, archiving) on top of coarse `SecurityConfig` route rules.
+3. **API & OpenAPI Tooling:** Added endpoints and Swagger UI last to enable rapid, end-to-end testing against real HTTP payloads.
+
+### What did you estimate versus what it actually took?
+* **Estimated:** Straightforward CRUD controller and service implementation.
+* **Actual:** Took longer than planned due to manual testing edge cases in Swagger, which revealed an authorization bypass flaw (`includeArchived` visibility enforcement) that required refining service-layer authorization logic.
