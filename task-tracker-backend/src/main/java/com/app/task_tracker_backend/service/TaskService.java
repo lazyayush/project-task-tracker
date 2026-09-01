@@ -1,14 +1,7 @@
 package com.app.task_tracker_backend.service;
 
-import com.app.task_tracker_backend.entity.Project;
-import com.app.task_tracker_backend.entity.Task;
-import com.app.task_tracker_backend.entity.TaskBlock;
-import com.app.task_tracker_backend.entity.TaskStatus;
-import com.app.task_tracker_backend.entity.User;
-import com.app.task_tracker_backend.repositories.ProjectMemberRepository;
-import com.app.task_tracker_backend.repositories.ProjectRepository;
-import com.app.task_tracker_backend.repositories.TaskBlockRepository;
-import com.app.task_tracker_backend.repositories.TaskRepository;
+import com.app.task_tracker_backend.entity.*;
+import com.app.task_tracker_backend.repositories.*;
 import com.app.task_tracker_backend.dto.CreateTaskRequest;
 import com.app.task_tracker_backend.dto.TaskResponse;
 import com.app.task_tracker_backend.dto.UpdateTaskRequest;
@@ -29,17 +22,21 @@ public class TaskService {
     private final TaskBlockRepository taskBlockRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TaskAssigneeRepository taskAssigneeRepository;
+    private final UserRepository userRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskBlockRepository taskBlockRepository,
             ProjectRepository projectRepository,
-            ProjectMemberRepository projectMemberRepository
+            ProjectMemberRepository projectMemberRepository, TaskAssigneeRepository taskAssigneeRepository, UserRepository userRepository
     ) {
         this.taskRepository = taskRepository;
         this.taskBlockRepository = taskBlockRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.taskAssigneeRepository = taskAssigneeRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -227,6 +224,62 @@ public class TaskService {
         }
     }
 
+    @Transactional
+    public void assign(Long taskId, String userEmail, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertCanManageAssignment(currentUser, task.getProject());
+
+        User userToAssign = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userEmail));
+
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(task.getProject().getId(), userToAssign.getId());
+        if (!isMember) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only members of this project may be assigned to its tasks");
+        }
+
+        if (taskAssigneeRepository.existsByTaskIdAndUserId(taskId, userToAssign.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "User is already assigned to this task");
+        }
+
+        TaskAssignee assignee = TaskAssignee.builder()
+                .task(task)
+                .user(userToAssign)
+                .assignedAt(Instant.now())
+                .build();
+
+        taskAssigneeRepository.save(assignee);
+    }
+
+    @Transactional
+    public void unassign(Long taskId, String userEmail, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertCanManageAssignment(currentUser, task.getProject());
+
+        User userToUnassign = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userEmail));
+
+        taskAssigneeRepository.deleteByTaskIdAndUserId(taskId, userToUnassign.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskResponse> myTasks(User currentUser) {
+        return taskAssigneeRepository.findByUserId(currentUser.getId()).stream()
+                .map(TaskAssignee::getTask)
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private void assertCanManageAssignment(User user, Project project) {
+        boolean isOwner = project.getOwner().getId().equals(user.getId());
+        boolean isManagerMember = user.getRole().name().equals("MANAGER")
+                && projectMemberRepository.existsByProjectIdAndUserId(project.getId(), user.getId());
+
+        if (!isOwner && !isManagerMember) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only the project owner or a project-member manager can manage assignments");
+        }
+    }
+
     private void assertManagerIsProjectMember(User user, Project project) {
         boolean isManager = user.getRole().name().equals("MANAGER");
         if (!isManager) {
@@ -268,18 +321,14 @@ public class TaskService {
                 .map(b -> b.getBlockingTask().getId())
                 .toList();
 
+        List<String> assigneeEmails = taskAssigneeRepository.findByTaskId(task.getId()).stream()
+                .map(a -> a.getUser().getEmail())
+                .toList();
+
         return new TaskResponse(
-                task.getId(),
-                task.getProject().getId(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getPriority(),
-                task.getDueDate(),
-                task.getStatus(),
-                task.getBlockedFromStatus(),
-                blockerIds,
-                task.getCreatedAt(),
-                task.getUpdatedAt()
+                task.getId(), task.getProject().getId(), task.getTitle(), task.getDescription(),
+                task.getPriority(), task.getDueDate(), task.getStatus(), task.getBlockedFromStatus(),
+                blockerIds, assigneeEmails, task.getCreatedAt(), task.getUpdatedAt()
         );
     }
 }

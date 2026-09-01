@@ -114,3 +114,24 @@
 ### Constraints & Architecture Boundaries
 * **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, FKs referencing `tasks.id`, `uq_task_blocks_pair` (`UNIQUE(blocking_task_id, blocked_task_id)`), and `chk_task_blocks_not_self` (`CHECK(blocking_task_id != blocked_task_id)`). Prevents duplicate dependency pairs and self-blocking tasks.
 
+---
+
+## Table: `task_assignees`
+
+### Columns & Data Types
+* **`id`** (`BIGSERIAL`): Primary key.
+* **`task_id`** (`BIGINT`): Foreign key referencing `tasks.id` (NOT NULL).
+* **`user_id`** (`BIGINT`): Foreign key referencing `users.id` (NOT NULL).
+* **`assigned_at`** (`TIMESTAMPTZ`): UTC assignment timestamp (NOT NULL, `DEFAULT now()`).
+
+### Relationships
+* **Task ↔ User (`task_assignees`): Many-to-Many.** A single task can be assigned to multiple users, and a single user can be assigned to multiple tasks. This join table explicitly resolves that many-to-many relationship.
+
+### Constraints & Architecture Boundaries
+* **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, FKs referencing `tasks.id` and `users.id`, and `uq_task_assignees_task_user` (`UNIQUE(task_id, user_id)`). The unique constraint prevents duplicate user assignments on a single task.
+* **Application-enforced:** Project membership validation (ensuring an assignee belongs to the task's parent project) and permission checks for assigning/unassigning users.
+
+
+### Bottlenecks at 100x Scale
+* **Load-Bearing `user_id` Index:** Fetching "all tasks assigned to User X across projects" relies critically on `idx_task_assignees_user_id`. Without it, queries would fail because the unique constraint only creates an implicit index composite-keyed on `(task_id, user_id)` starting with `task_id`.
+* **High-Volume Join Overhead:** Aggregating global task dashboards at scale requires joining millions of `task_assignees` rows back to `tasks` and `projects`, putting heavy memory pressure on the database without application-level caching or secondary index tuning.

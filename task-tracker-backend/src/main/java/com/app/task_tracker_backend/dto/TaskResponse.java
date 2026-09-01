@@ -16,6 +16,7 @@ public record TaskResponse(
         TaskStatus status,
         TaskStatus blockedFromStatus,
         List<Long> blockingTaskIds,
+        List<String> assigneeEmails,
         Instant createdAt,
         Instant updatedAt
 ) {

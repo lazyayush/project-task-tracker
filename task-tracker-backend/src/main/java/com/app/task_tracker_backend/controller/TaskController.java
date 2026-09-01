@@ -1,13 +1,10 @@
 package com.app.task_tracker_backend.controller;
 
+import com.app.task_tracker_backend.dto.*;
 import com.app.task_tracker_backend.entity.TaskStatus;
 import com.app.task_tracker_backend.entity.User;
 import com.app.task_tracker_backend.repositories.UserRepository;
 import com.app.task_tracker_backend.service.TaskService;
-import com.app.task_tracker_backend.dto.AddBlockerRequest;
-import com.app.task_tracker_backend.dto.CreateTaskRequest;
-import com.app.task_tracker_backend.dto.TaskResponse;
-import com.app.task_tracker_backend.dto.UpdateTaskRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -98,5 +95,30 @@ public class TaskController {
     private User currentUser(Authentication authentication) {
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+    }
+
+    @PostMapping("/api/tasks/{taskId}/assignees")
+    public ResponseEntity<Void> assign(
+            @PathVariable Long taskId,
+            @Valid @RequestBody AddMemberRequest request,
+            Authentication authentication
+    ) {
+        taskService.assign(taskId, request.userEmail(), currentUser(authentication));
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/api/tasks/{taskId}/assignees")
+    public ResponseEntity<Void> unassign(
+            @PathVariable Long taskId,
+            @Valid @RequestBody AddMemberRequest request,
+            Authentication authentication
+    ) {
+        taskService.unassign(taskId, request.userEmail(), currentUser(authentication));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/api/me/tasks")
+    public List<TaskResponse> myTasks(Authentication authentication) {
+        return taskService.myTasks(currentUser(authentication));
     }
 }

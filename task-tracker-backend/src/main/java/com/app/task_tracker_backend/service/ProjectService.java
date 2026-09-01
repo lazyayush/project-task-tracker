@@ -5,6 +5,7 @@ import com.app.task_tracker_backend.entity.ProjectMember;
 import com.app.task_tracker_backend.entity.User;
 import com.app.task_tracker_backend.repositories.ProjectMemberRepository;
 import com.app.task_tracker_backend.repositories.ProjectRepository;
+import com.app.task_tracker_backend.repositories.TaskAssigneeRepository;
 import com.app.task_tracker_backend.repositories.UserRepository;
 import com.app.task_tracker_backend.dto.CreateProjectRequest;
 import com.app.task_tracker_backend.dto.ProjectResponse;
@@ -23,15 +24,17 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final UserRepository userRepository;
+    private final TaskAssigneeRepository taskAssigneeRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
-            UserRepository userRepository
+            UserRepository userRepository, TaskAssigneeRepository taskAssigneeRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.userRepository = userRepository;
+        this.taskAssigneeRepository = taskAssigneeRepository;
     }
 
     @Transactional
@@ -126,6 +129,7 @@ public class ProjectService {
         }
 
         projectMemberRepository.deleteByProjectIdAndUserId(projectId, user.getId());
+        taskAssigneeRepository.deleteByUser_IdAndTask_Project_Id(user.getId(), projectId);
     }
 
     @Transactional(readOnly = true)

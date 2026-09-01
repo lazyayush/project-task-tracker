@@ -48,3 +48,9 @@
 - **Chose:** Returning a reopened DONE task directly to IN_PROGRESS.
 - **Rejected:** Returning a reopened DONE task to BACKLOG.
 - **Why:** Reopening a completed task implies resuming active work rather than sending it back to unprioritized planning.
+
+## Decision 9
+
+- **Chose:** Task assignments can be managed by either the project owner or any manager who is an explicit member of that project.
+- **Rejected:** Strictly manager-only authority or fully open authority to all project members.
+- **Why:** Assignment directly impacts accountability and user dashboards, making it more sensitive than status updates but less restricted than core metadata edits. It also exercises the owner role separation: allowing non-manager owners to assign work within their own projects without giving open assignment rights to general project members.
