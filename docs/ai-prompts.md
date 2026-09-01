@@ -113,3 +113,4 @@ Delivered full project lifecycle and membership APIs (create, update, archive, r
 
 ### Correction
 Manual testing via Swagger UI caught an authorization flaw where MEMBER users could pass includeArchived=true on GET /api/projects to view archived projects. The issue stemmed from the controller blindly accepting the query parameter without checking caller permissions. Fixed at the controller/service boundary by deriving the flag server-side (effectiveIncludeArchived = isManager && requestedIncludeArchived), enforcing role restrictions regardless of raw request inputs.
+

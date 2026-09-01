@@ -19,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
@@ -134,6 +136,95 @@ public class TaskService {
                         taskBlockRepository::delete,
                         () -> { throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such blocking relationship"); }
                 );
+    }
+
+    @Transactional
+    public TaskResponse transitionStatus(Long taskId, TaskStatus newStatus, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertProjectMember(currentUser, task.getProject()); // any member, not manager-only — see Decision log
+
+        TaskStatus current = task.getStatus();
+
+        if (newStatus == TaskStatus.BLOCKED) {
+            if (current != TaskStatus.IN_PROGRESS && current != TaskStatus.IN_REVIEW) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot block a task from " + current + " — only In Progress or In Review can be blocked");
+            }
+            task.setBlockedFromStatus(current);
+            task.setStatus(TaskStatus.BLOCKED);
+
+        } else if (current == TaskStatus.BLOCKED) {
+            // The only legal move FROM Blocked is unblocking, back to blockedFromStatus.
+            if (!newStatus.equals(task.getBlockedFromStatus())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "A blocked task can only return to " + task.getBlockedFromStatus() + ", not " + newStatus);
+            }
+            task.setStatus(newStatus);
+            task.setBlockedFromStatus(null);
+
+        } else if (newStatus == TaskStatus.DONE) {
+            if (!TaskTransitionRules.allowedFrom(current).contains(newStatus)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot move from " + current + " directly to Done");
+            }
+            assertNoUnfinishedBlockers(task);
+            task.setStatus(newStatus);
+
+        } else {
+            if (!TaskTransitionRules.allowedFrom(current).contains(newStatus)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot move from " + current + " to " + newStatus);
+            }
+            task.setStatus(newStatus);
+        }
+
+        task.setUpdatedAt(Instant.now());
+        return toResponse(taskRepository.save(task));
+    }
+
+    @Transactional(readOnly = true)
+    public Set<TaskStatus> getLegalTransitions(Long taskId, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertProjectMember(currentUser, task.getProject());
+
+        TaskStatus current = task.getStatus();
+
+        if (current == TaskStatus.BLOCKED) {
+            return Set.of(task.getBlockedFromStatus());
+        }
+
+        Set<TaskStatus> candidates = TaskTransitionRules.allowedFrom(current);
+
+        // Done is atcually legal right now if there are no unfinished blockers —
+        // this is the one case where "legal transition" depends on more than the
+        // status graph alone, so it can't be answered by the static map by itself.
+        if (candidates.contains(TaskStatus.DONE) && hasUnfinishedBlockers(task)) {
+            return candidates.stream().filter(s -> s != TaskStatus.DONE).collect(Collectors.toSet());
+        }
+
+        return candidates;
+    }
+
+    private void assertNoUnfinishedBlockers(Task task) {
+        if (hasUnfinishedBlockers(task)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot move to Done — this task has an unfinished blocking task");
+        }
+    }
+
+    private boolean hasUnfinishedBlockers(Task task) {
+        return taskBlockRepository.findByBlockedTaskId(task.getId()).stream()
+                .map(TaskBlock::getBlockingTask)
+                .anyMatch(blocker -> blocker.getStatus() != TaskStatus.DONE);
+    }
+
+    private void assertProjectMember(User user, Project project) {
+        boolean isManager = user.getRole().name().equals("MANAGER");
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(project.getId(), user.getId());
+
+        if (!isManager && !isMember) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You must be a member of this project");
+        }
     }
 
     private void assertManagerIsProjectMember(User user, Project project) {

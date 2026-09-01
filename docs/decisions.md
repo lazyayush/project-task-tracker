@@ -30,3 +30,21 @@
 - **Chose:** Global manager privileges (any manager can edit, archive, or manage membership across any project).
 - **Rejected:** Restricting manager administrative actions strictly to projects they personally own.
 - **Why:** Matches the literal spec requirement ("Managers can create and archive projects...") and eliminates redundant ownership-check logic across service layers.
+
+## Decision 6
+
+- **Chose:** Splitting task permissions into separate rules for metadata edits (manager-only) and status transitions ( open to all project members).
+- **Rejected:** Treating "edit" as a single blanket manager-only rule.
+- **Why:** Blanket edits prevent staff from moving tasks forward and break per-user task tracking.
+
+## Decision 7
+
+- **Chose:** Requiring a manager to be explicitly assigned as a project member in order to create, edit, or delete tasks within that project.
+- **Rejected:** Extending global manager administrative privileges directly to task-level actions.
+- **Why:** Non-member managers can administer the project, but shouldn't alter its individual tasks.
+
+## Decision 8
+
+- **Chose:** Returning a reopened DONE task directly to IN_PROGRESS.
+- **Rejected:** Returning a reopened DONE task to BACKLOG.
+- **Why:** Reopening a completed task implies resuming active work rather than sending it back to unprioritized planning.

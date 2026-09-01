@@ -67,3 +67,50 @@
 
 ### Bottlenecks at 100x Scale
 * **Unindexed `user_id` Lookups:** The `UNIQUE(project_id, user_id)` index only speeds up queries starting with `project_id`. Fetching "all projects for User X" via `findByUserId` requires full sequential table scans without an explicit index on `user_id`.
+
+---
+
+## Table: `tasks`
+
+### Columns & Data Types
+* **`id`** (`BIGSERIAL`): Primary key.
+* **`project_id`** (`BIGINT`): Foreign key referencing `projects.id` (NOT NULL).
+* **`title`** (`VARCHAR(255)`): Task name (NOT NULL).
+* **`description`** (`TEXT`): Detailed details (Optional).
+* **`priority`** (`VARCHAR(10)`): Enum (`LOW`, `MEDIUM`, `HIGH`) (NOT NULL).
+* **`due_date`** (`TIMESTAMPTZ`): Task deadline (Optional).
+* **`status`** (`VARCHAR(20)`): Enum (`BACKLOG`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `BLOCKED`) (NOT NULL).
+* **`blocked_from_status`** (`VARCHAR(20)`): Pre-blocked state (`IN_PROGRESS`, `IN_REVIEW`) (Optional).
+* **`created_at`** (`TIMESTAMPTZ`): UTC creation timestamp (NOT NULL, `DEFAULT now()`).
+* **`updated_at`** (`TIMESTAMPTZ`): UTC update timestamp (NOT NULL, `DEFAULT now()`).
+
+### Relationships
+* **Project ↔ Task (`tasks`): One-to-Many.** Each project contains multiple tasks; each task belongs strictly to one project.
+* **Task ↔ Task (`TaskBlock`): Many-to-Many.** Inter-task dependencies are externalized to a separate join table (not defined in this schema).
+
+### Constraints & Architecture Boundaries
+* **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, FK referencing `projects.id`, and `CHECK` constraints (`chk_tasks_priority`, `chk_tasks_status`, `chk_tasks_blocked_from_status`). Prevents data corruption and invalid enum values.
+* **Application-enforced:** Permission guards (manager-only metadata edits vs. member status transitions), task-blocking dependency rules, and context-aware state updates for `blocked_from_status`. Keeps complex business logic out of SQL.
+
+### Deliberate Denormalisation
+* Caching `blocked_from_status` directly on the task row avoids audit-log lookups during unblocking. Using string ENUMs with `CHECK` constraints avoids external `JOIN` tables for static statuses.
+
+### Bottlenecks at 100x Scale
+* **Unindexed Composite Queries:** The single-column `idx_tasks_project_id` index fails on combined filter/sort queries (e.g., `WHERE project_id = X AND status = Y ORDER BY due_date`), causing expensive file-sorts.
+
+---
+
+## Table: `task_blocks`
+
+### Columns & Data Types
+* **`id`** (`BIGSERIAL`): Primary key.
+* **`blocking_task_id`** (`BIGINT`): Foreign key referencing `tasks.id` (NOT NULL) representing the prerequisite task.
+* **`blocked_task_id`** (`BIGINT`): Foreign key referencing `tasks.id` (NOT NULL) representing the dependent task.
+* **`created_at`** (`TIMESTAMPTZ`): UTC creation timestamp (NOT NULL, `DEFAULT now()`).
+
+### Relationships
+* **Task ↔ Task (`task_blocks`): Many-to-Many Self-Reference.** Joins tasks to other tasks to establish dependency relationships (a task can block many tasks and be blocked by many tasks).
+
+### Constraints & Architecture Boundaries
+* **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, FKs referencing `tasks.id`, `uq_task_blocks_pair` (`UNIQUE(blocking_task_id, blocked_task_id)`), and `chk_task_blocks_not_self` (`CHECK(blocking_task_id != blocked_task_id)`). Prevents duplicate dependency pairs and self-blocking tasks.
+

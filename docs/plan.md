@@ -36,3 +36,20 @@
 ### What did you estimate versus what it actually took?
 * **Estimated:** Straightforward CRUD controller and service implementation.
 * **Actual:** Took longer than planned due to manual testing edge cases in Swagger, which revealed an authorization bypass flaw (`includeArchived` visibility enforcement) that required refining service-layer authorization logic.
+
+---
+
+## Phase 3 — Task CRUD and blocking.
+
+### How did you break the work into sessions?
+Phase 3 was executed as a dedicated session focused on establishing the core task domain and its lifecycle state machine. The session was divided into upfront architectural resolution of permission rules (metadata vs. status split), database and entity creation, transition logic implementation, and end-to-end testing of the full transition and dependency flow.
+
+### What order did you build in, and why that order?
+1. **Permission & Boundary Design:** Resolved the metadata-edit vs. status-transition split upfront so authorization rules were clear before writing any code.
+2. **Domain & Data Layer:** Built the Task and TaskBlock entities and generated database migrations to lay down the underlying data model.
+3. **Service & Controller Layer:** Built the CRUD APIs, inter-task dependency validation (TaskBlock), and state transition rules.
+4. **Lifecycle Testing:** Rigorously tested the complete status transition sequence (legal next-states, reopen pathways, blocking checks).
+
+### What did you estimate versus what it actually took?
+* **Estimated:** Building the basic Task/TaskBlock CRUD endpoints went as estimated. However, rigorous testing of edge-case status transitions (reopening tasks, preventing backward moves from IN_REVIEW, and dependency checks) added unexpected time.
+* **Actual:** Took longer than planned due to manual testing edge cases in Swagger, which revealed an authorization bypass flaw (`includeArchived` visibility enforcement) that required refining service-layer authorization logic.
