@@ -1,10 +1,16 @@
 package com.app.task_tracker_backend.service;
 
+import com.app.task_tracker_backend.dto.PagedResponse;
 import com.app.task_tracker_backend.entity.*;
 import com.app.task_tracker_backend.repositories.*;
 import com.app.task_tracker_backend.dto.CreateTaskRequest;
 import com.app.task_tracker_backend.dto.TaskResponse;
 import com.app.task_tracker_backend.dto.UpdateTaskRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -267,6 +273,70 @@ public class TaskService {
                 .map(TaskAssignee::getTask)
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<TaskResponse> search(TaskSearchCriteria criteria, User currentUser) {
+        boolean isManager = currentUser.getRole().name().equals("MANAGER");
+
+        Specification<Task> spec = Specification.unrestricted();
+
+        if (!isManager) {
+            List<Long> visibleProjectIds = projectMemberRepository.findByUserId(currentUser.getId())
+                    .stream()
+                    .map(pm -> pm.getProject().getId())
+                    .toList();
+
+            spec = spec.and(TaskSpecifications.projectIdIn(visibleProjectIds))
+                    .and(TaskSpecifications.projectNotArchived());
+        } else {
+            spec = spec.and(TaskSpecifications.projectNotArchived());
+        }
+
+        if (criteria.projectId() != null) {
+            spec = spec.and(TaskSpecifications.projectIdEquals(criteria.projectId()));
+        }
+        if (criteria.status() != null) {
+            spec = spec.and(TaskSpecifications.statusEquals(criteria.status()));
+        }
+        if (criteria.priority() != null) {
+            spec = spec.and(TaskSpecifications.priorityEquals(criteria.priority()));
+        }
+        if (criteria.searchTerm() != null && !criteria.searchTerm().isBlank()) {
+            spec = spec.and(TaskSpecifications.titleOrDescriptionContains(criteria.searchTerm()));
+        }
+        if (criteria.assigneeEmail() != null && !criteria.assigneeEmail().isBlank()) {
+            spec = spec.and(TaskSpecifications.assigneeEmailEquals(criteria.assigneeEmail()));
+        }
+        if (criteria.overdueOnly()) {
+            spec = spec.and(TaskSpecifications.isOverdue());
+        }
+
+        int pageSize = Math.min(Math.max(criteria.size(), 1), 100); // hard cap at 100
+        int pageNumber = Math.max(criteria.page(), 0);
+
+        Pageable pageable;
+        if ("priority".equals(criteria.sortBy())) {
+            boolean descending = "desc".equalsIgnoreCase(criteria.sortDirection());
+            spec = spec.and(TaskSpecifications.orderByPriorityRank(descending));
+            pageable = PageRequest.of(pageNumber, pageSize); // ordering handled by the Specification itself
+        } else {
+            String sortField = "updatedAt".equals(criteria.sortBy()) ? "updatedAt" : "dueDate"; // default: dueDate
+            Sort.Direction direction = "desc".equalsIgnoreCase(criteria.sortDirection())
+                    ? Sort.Direction.DESC
+                    : Sort.Direction.ASC;
+            pageable = PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortField));
+        }
+
+        Page<Task> results = taskRepository.findAll(spec, pageable);
+
+        return new PagedResponse<>(
+                results.getContent().stream().map(this::toResponse).toList(),
+                results.getNumber(),
+                results.getSize(),
+                results.getTotalElements(),
+                results.getTotalPages()
+        );
     }
 
     private void assertCanManageAssignment(User user, Project project) {

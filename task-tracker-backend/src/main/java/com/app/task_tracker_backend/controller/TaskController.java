@@ -1,9 +1,11 @@
 package com.app.task_tracker_backend.controller;
 
 import com.app.task_tracker_backend.dto.*;
+import com.app.task_tracker_backend.entity.Priority;
 import com.app.task_tracker_backend.entity.TaskStatus;
 import com.app.task_tracker_backend.entity.User;
 import com.app.task_tracker_backend.repositories.UserRepository;
+import com.app.task_tracker_backend.service.TaskSearchCriteria;
 import com.app.task_tracker_backend.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -120,5 +122,26 @@ public class TaskController {
     @GetMapping("/api/me/tasks")
     public List<TaskResponse> myTasks(Authentication authentication) {
         return taskService.myTasks(currentUser(authentication));
+    }
+
+    @GetMapping("/api/tasks/search")
+    public PagedResponse<TaskResponse> search(
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) String assigneeEmail,
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(defaultValue = "false") boolean overdueOnly,
+            @RequestParam(defaultValue = "dueDate") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication
+    ) {
+        TaskSearchCriteria criteria = new TaskSearchCriteria(
+                searchTerm, projectId, status, assigneeEmail, priority,
+                overdueOnly, sortBy, sortDirection, page, size
+        );
+        return taskService.search(criteria, currentUser(authentication));
     }
 }
