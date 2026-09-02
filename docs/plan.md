@@ -104,3 +104,17 @@ Focused on fixing completion tracking, defining dashboard metrics and visibility
 ### What did you estimate versus what it actually took?
 * **Estimated:** Dashboard aggregation would be straightforward after defining the metrics.
 * **Actual:** Took longer due to the required completed_at schema change and testing.
+
+## Phase 7 — Task History & Comments
+
+### How did you break the work into sessions?
+Focused on building the history foundation and immutability guarantee, creating the history service, integrating logging across existing task mutations, adding comments, and exposing the task timeline.
+
+### What order did you build in, and why that order?
+1. **History Foundation:** Added the TaskHistoryEntry entity and migration, including triggers to enforce immutability at the database level.
+2. **History Service and Task Integration:** Built TaskHistoryService with separate methods for each event type so existing task operations could log changes consistently.
+3. **Comments:** Added task comments as COMMENT history events rather than introducing a separate comments table.
+4. **Timeline:** Added the history endpoint to return the complete chronological task timeline and verified the recorded events.
+
+### What did you estimate versus what it actually took?
+The phase was completed in the estimated time.

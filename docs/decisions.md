@@ -66,3 +66,9 @@
 - **Chose:** byStatus includes all tasks, including Done, while byAssignee excludes Done tasks.
 - **Rejected:** Using the same scope for both breakdowns.
 - **Why:** The status breakdown is intended to show the complete task distribution, whereas the assignee breakdown represents current workload. Including completed tasks in the latter would turn it into a historical completion leaderboard rather than a view of active responsibility.
+
+## Decision 12
+
+- **Chose:** Database-trigger-enforced immutability for task_history using BEFORE UPDATE and BEFORE DELETE triggers.
+- **Rejected:** Application-only protection that relies on developers avoiding updates and deletes.
+- **Why:** History is an audit trail and must never be altered after creation. Application rules can be bypassed by future code or database operations, whereas triggers enforce immutability at the database level.

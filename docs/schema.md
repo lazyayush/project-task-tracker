@@ -144,7 +144,33 @@
 ALTER TABLE tasks ADD COLUMN completed_at TIMESTAMPTZ;
 
 ### Purpose
-completed_at (TIMESTAMPTZ): Stores the UTC timestamp at which a task was completed. The column is nullable because incomplete tasks do not have a completion timestamp.
+* **`completed_at`** (`TIMESTAMPTZ`): Stores the UTC timestamp at which a task was completed. The column is nullable because incomplete tasks do not have a completion timestamp.
 
 ### Bottlenecks at 100x Scale
 Dashboard aggregations currently load visible tasks into memory and aggregate them using Java streams. This is acceptable for a dashboard summary but would become a bottleneck at significantly larger scale.
+
+---
+
+## Table: `task_history`
+
+### Columns & Data Types
+* **`id`** (`BIGSERIAL`): Primary key.
+* **`task_id`** (`BIGINT`): Foreign key referencing `tasks.id` (NOT NULL).
+* **`actor_id`** (`BIGINT`): Foreign key referencing `users.id` (NOT NULL). user who performed the action.
+* **`event_type`** (`VARCHAR(20)`): Event type, restricted by CHECK to CREATED, FIELD_CHANGED, ASSIGNED, UNASSIGNED, or COMMENT.
+* **`field_name`** (`VARCHAR(50)`): Changed field name; nullable.
+* **`old_value / new_value`** (`TEXT`): Previous and new values; nullable.
+* **`comment_text`** (`TEXT`): Comment content; nullable.
+* **`created_at`** (`TIMESTAMPTZ`): Event timestamp (NOT NULL, DEFAULT now()).
+
+### Relationships
+**Task ↔ Task History: One-to-Many.** One task can have many history entries.
+**User ↔ Task History: One-to-Many.** One user can create many history entries.
+
+### Constraints & Architecture Boundaries
+* **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, foreign keys, and `event_type` `CHECK` constraint.
+* **Immutability:** `BEFORE UPDATE` and `BEFORE DELETE` triggers prevent modification or deletion of history rows.
+* **Application-enforced:** Service layer determines when events are created and their event details.
+
+### Bottlenecks at 100x Scale
+* **Table growth:** Every task change creates a history row, causing rapid growth.

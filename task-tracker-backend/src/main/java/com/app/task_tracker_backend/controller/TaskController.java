@@ -170,4 +170,19 @@ public class TaskController {
                 .header("Content-Disposition", "attachment; filename=tasks_export.csv")
                 .body(csv);
     }
+
+    @PostMapping("/api/tasks/{taskId}/comments")
+    public ResponseEntity<Void> addComment(
+            @PathVariable Long taskId,
+            @RequestBody Map<String, String> body,
+            Authentication authentication
+    ) {
+        taskService.addComment(taskId, body.get("text"), currentUser(authentication));
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/api/tasks/{taskId}/history")
+    public List<TaskHistoryResponse> getHistory(@PathVariable Long taskId, Authentication authentication) {
+        return taskService.getHistory(taskId, currentUser(authentication));
+    }
 }

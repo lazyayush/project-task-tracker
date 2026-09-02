@@ -29,13 +29,15 @@ public class TaskService {
     private final TaskAssigneeRepository taskAssigneeRepository;
     private final UserRepository userRepository;
     private final TaskBulkActionExecutor taskBulkActionExecutor;
+    private final TaskHistoryService taskHistoryService;
+    private final TaskHistoryRepository taskHistoryRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskBlockRepository taskBlockRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository, TaskAssigneeRepository taskAssigneeRepository, UserRepository userRepository,
-            @org.springframework.context.annotation.Lazy TaskBulkActionExecutor taskBulkActionExecutor
+            @org.springframework.context.annotation.Lazy TaskBulkActionExecutor taskBulkActionExecutor, TaskHistoryService taskHistoryService, TaskHistoryRepository taskHistoryRepository
     ) {
         this.taskRepository = taskRepository;
         this.taskBlockRepository = taskBlockRepository;
@@ -44,6 +46,8 @@ public class TaskService {
         this.taskAssigneeRepository = taskAssigneeRepository;
         this.userRepository = userRepository;
         this.taskBulkActionExecutor = taskBulkActionExecutor;
+        this.taskHistoryService = taskHistoryService;
+        this.taskHistoryRepository = taskHistoryRepository;
     }
 
     @Transactional
@@ -65,6 +69,7 @@ public class TaskService {
                 .build();
 
         task = taskRepository.save(task);
+        taskHistoryService.recordCreated(task, currentUser);
         return toResponse(task);
     }
 
@@ -72,6 +77,11 @@ public class TaskService {
     public TaskResponse update(Long taskId, UpdateTaskRequest request, User currentUser) {
         Task task = getTaskOrThrow(taskId);
         assertManagerIsProjectMember(currentUser, task.getProject());
+
+        taskHistoryService.recordFieldChange(task, currentUser, "title", task.getTitle(), request.title());
+        taskHistoryService.recordFieldChange(task, currentUser, "description", task.getDescription(), request.description());
+        taskHistoryService.recordFieldChange(task, currentUser, "priority", task.getPriority(), request.priority());
+        taskHistoryService.recordFieldChange(task, currentUser, "dueDate", task.getDueDate(), request.dueDate());
 
         task.setTitle(request.title());
         task.setDescription(request.description());
@@ -187,6 +197,7 @@ public class TaskService {
         }
 
         task.setUpdatedAt(Instant.now());
+        taskHistoryService.recordFieldChange(task, currentUser, "status", current, task.getStatus());
         return toResponse(taskRepository.save(task));
     }
 
@@ -259,6 +270,7 @@ public class TaskService {
                 .build();
 
         taskAssigneeRepository.save(assignee);
+        taskHistoryService.recordAssigned(task, currentUser, userToAssign.getEmail());
     }
 
     @Transactional
@@ -270,6 +282,7 @@ public class TaskService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userEmail));
 
         taskAssigneeRepository.deleteByTaskIdAndUserId(taskId, userToUnassign.getId());
+        taskHistoryService.recordUnassigned(task, currentUser, userToUnassign.getEmail());
     }
 
     @Transactional(readOnly = true)
@@ -325,8 +338,11 @@ public class TaskService {
         }
 
         // REPLACE semantics: remove every existing assignee on this task first.
-        taskAssigneeRepository.findByTaskId(taskId)
-                .forEach(a -> taskAssigneeRepository.deleteByTaskIdAndUserId(taskId, a.getUser().getId()));
+        List<TaskAssignee> previous = taskAssigneeRepository.findByTaskId(taskId);
+        previous.forEach(a -> {
+            taskAssigneeRepository.deleteByTaskIdAndUserId(taskId, a.getUser().getId());
+            taskHistoryService.recordUnassigned(task, currentUser, a.getUser().getEmail());
+        });
 
         TaskAssignee assignee = TaskAssignee.builder()
                 .task(task)
@@ -334,12 +350,16 @@ public class TaskService {
                 .assignedAt(Instant.now())
                 .build();
         taskAssigneeRepository.save(assignee);
+
+        taskHistoryService.recordAssigned(task, currentUser, newAssignee.getEmail());
     }
 
     @Transactional
     public void updateDueDateOnly(Long taskId, Instant newDueDate, User currentUser) {
         Task task = getTaskOrThrow(taskId);
         assertManagerIsProjectMember(currentUser, task.getProject()); // due date is metadata — manager-only, per Chunk 8's split
+
+        taskHistoryService.recordFieldChange(task, currentUser, "dueDate", task.getDueDate(), newDueDate);
 
         task.setDueDate(newDueDate);
         task.setUpdatedAt(Instant.now());
@@ -401,6 +421,37 @@ public class TaskService {
         }
 
         return csv.toString();
+    }
+
+    @Transactional
+    public void addComment(Long taskId, String commentText, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertProjectMember(currentUser, task.getProject()); // reusing the same check status transitions use
+
+        taskHistoryService.recordComment(task, currentUser, commentText);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskHistoryResponse> getHistory(Long taskId, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertCanView(currentUser, task.getProject());
+
+        return taskHistoryRepository.findByTaskIdOrderByCreatedAtAsc(taskId).stream()
+                .map(this::toHistoryResponse)
+                .toList();
+    }
+
+    private TaskHistoryResponse toHistoryResponse(TaskHistoryEntry entry) {
+        return new TaskHistoryResponse(
+                entry.getId(),
+                entry.getActor().getEmail(),
+                entry.getEventType(),
+                entry.getFieldName(),
+                entry.getOldValue(),
+                entry.getNewValue(),
+                entry.getCommentText(),
+                entry.getCreatedAt()
+        );
     }
 
     private String escapeCsv(String value) {
