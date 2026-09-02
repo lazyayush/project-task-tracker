@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,13 +32,14 @@ public class TaskService {
     private final TaskBulkActionExecutor taskBulkActionExecutor;
     private final TaskHistoryService taskHistoryService;
     private final TaskHistoryRepository taskHistoryRepository;
+    private final AlertDismissalRepository alertDismissalRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskBlockRepository taskBlockRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository, TaskAssigneeRepository taskAssigneeRepository, UserRepository userRepository,
-            @org.springframework.context.annotation.Lazy TaskBulkActionExecutor taskBulkActionExecutor, TaskHistoryService taskHistoryService, TaskHistoryRepository taskHistoryRepository
+            @org.springframework.context.annotation.Lazy TaskBulkActionExecutor taskBulkActionExecutor, TaskHistoryService taskHistoryService, TaskHistoryRepository taskHistoryRepository, AlertDismissalRepository alertDismissalRepository
     ) {
         this.taskRepository = taskRepository;
         this.taskBlockRepository = taskBlockRepository;
@@ -48,6 +50,7 @@ public class TaskService {
         this.taskBulkActionExecutor = taskBulkActionExecutor;
         this.taskHistoryService = taskHistoryService;
         this.taskHistoryRepository = taskHistoryRepository;
+        this.alertDismissalRepository = alertDismissalRepository;
     }
 
     @Transactional
@@ -83,11 +86,17 @@ public class TaskService {
         taskHistoryService.recordFieldChange(task, currentUser, "priority", task.getPriority(), request.priority());
         taskHistoryService.recordFieldChange(task, currentUser, "dueDate", task.getDueDate(), request.dueDate());
 
+        boolean dueDateChanged = !Objects.equals(task.getDueDate(), request.dueDate());
+
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setPriority(request.priority());
         task.setDueDate(request.dueDate());
         task.setUpdatedAt(Instant.now());
+
+        if (dueDateChanged) {
+            alertDismissalRepository.deleteByTaskId(taskId);
+        }
 
         return toResponse(taskRepository.save(task));
     }
@@ -361,8 +370,15 @@ public class TaskService {
 
         taskHistoryService.recordFieldChange(task, currentUser, "dueDate", task.getDueDate(), newDueDate);
 
+        boolean dueDateChanged = !Objects.equals(task.getDueDate(), newDueDate);
+
         task.setDueDate(newDueDate);
         task.setUpdatedAt(Instant.now());
+
+        if (dueDateChanged) {
+            alertDismissalRepository.deleteByTaskId(taskId);
+        }
+
         taskRepository.save(task);
     }
 
@@ -573,7 +589,7 @@ public class TaskService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
     }
 
-    private TaskResponse toResponse(Task task) {
+    public TaskResponse toResponse(Task task) {
         List<Long> blockerIds = taskBlockRepository.findByBlockedTaskId(task.getId()).stream()
                 .map(b -> b.getBlockingTask().getId())
                 .toList();

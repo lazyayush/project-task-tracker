@@ -128,3 +128,20 @@ Asked whether a bulk “assignee change” should REPLACE all existing assignees
 Implemented assignee changes with REPLACE semantics. The specified user becomes the task's assignee and existing assignments are removed first.
 
 
+## 5. Overdue Alerts Design
+
+### Prompt
+
+Asked for an architectural overview and clarification on whether overdue alerts should be personal or portfolio-wide.
+
+---
+
+### Output
+
+Initially recommended personal-only alerts because they were simpler and avoided ambiguity around manager visibility.
+
+---
+
+### Correction
+Re-read the brief and realized managers need portfolio-wide visibility to answer questions like “what is overdue?” and “who is overloaded?”. Revised the design to portfolio/project-scoped alerts, while keeping dismissal restricted to the viewer’s own assignments.
+

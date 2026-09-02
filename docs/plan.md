@@ -105,6 +105,8 @@ Focused on fixing completion tracking, defining dashboard metrics and visibility
 * **Estimated:** Dashboard aggregation would be straightforward after defining the metrics.
 * **Actual:** Took longer due to the required completed_at schema change and testing.
 
+---
+
 ## Phase 7 — Task History & Comments
 
 ### How did you break the work into sessions?
@@ -118,3 +120,17 @@ Focused on building the history foundation and immutability guarantee, creating 
 
 ### What did you estimate versus what it actually took?
 The phase was completed in the estimated time.
+
+---
+
+## Phase 8 — Overdue Alerts
+
+### How did you break the work into sessions?
+Focused on resolving alert-scope ambiguity, building dismissals and reset behavior, reviewing unused code, and checking for duplicated business logic.
+
+### What order did you build in, and why that order?
+1. **Alert Scope:** Initially chose personal-only alerts, then reversed to project/portfolio-scoped visibility after re-reading the brief.
+2. **Dismissals:** Added AlertDismissal as mutable current state and implemented automatic dismissal resets when a task's due date changes.
+
+### What did you estimate versus what it actually took?
+The phase required more iteration than initially expected because the alert-scope decision was reversed mid-phase. 

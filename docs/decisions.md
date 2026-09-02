@@ -72,3 +72,10 @@
 - **Chose:** Database-trigger-enforced immutability for task_history using BEFORE UPDATE and BEFORE DELETE triggers.
 - **Rejected:** Application-only protection that relies on developers avoiding updates and deletes.
 - **Why:** History is an audit trail and must never be altered after creation. Application rules can be bypassed by future code or database operations, whereas triggers enforce immutability at the database level.
+
+## Decision 13
+
+- **Chose:** Portfolio/project-visibility-scoped alerts: managers see overdue tasks across their portfolio, while members see tasks within their projects. Dismissal remains limited to tasks assigned to the viewer.
+- **Rejected:** Personal-only alerts showing only the viewer's assignments.
+- **Why:** Personal-only was simpler but didn't satisfy the brief's requirement for managers to see portfolio-wide overdue work and workload. It also broke the visibility pattern already established by the dashboard, search, and project views.
+- **Later reversed:** Initially implemented as personal-only, then changed after re-reading the brief and identifying the scope mismatch.

@@ -174,3 +174,28 @@ Dashboard aggregations currently load visible tasks into memory and aggregate th
 
 ### Bottlenecks at 100x Scale
 * **Table growth:** Every task change creates a history row, causing rapid growth.
+
+---
+
+## Table: `alert_dismissals`
+
+### Columns & Data Types
+
+* **`id`** (`BIGSERIAL`): Primary key.
+* **`task_id`** (`BIGINT`): Foreign key referencing `tasks.id` (NOT NULL).
+* **`user_id`** (`BIGINT`): Foreign key referencing `users.id` (NOT NULL).
+* **`dismissed_at`** (`TIMESTAMPTZ`): UTC timestamp when the alert was dismissed (NOT NULL, `DEFAULT now()`).
+
+### Relationships
+
+* **Task ↔ Alert Dismissal: One-to-Many.** A task can have dismissal records from multiple users, while each dismissal belongs to one task.
+* **User ↔ Alert Dismissal: One-to-Many.** A user can dismiss alerts for multiple tasks, while each dismissal belongs to one user.
+
+### Constraints & Architecture Boundaries
+
+* **Database-enforced:** `PRIMARY KEY`, `NOT NULL`, foreign keys to `tasks` and `users`, and `UNIQUE(task_id, user_id)` to prevent duplicate dismissal records for the same user-task pair.
+* **Application-enforced:** Alert visibility, permission checks, and when a dismissal should be created or removed are handled by the service layer because they depend on business rules.
+
+### Bottlenecks at 100x Scale
+
+* **Table growth:** Dismissal records grow with the number of users dismissing alerts.
