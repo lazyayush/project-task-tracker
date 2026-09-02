@@ -135,3 +135,16 @@
 ### Bottlenecks at 100x Scale
 * **Load-Bearing `user_id` Index:** Fetching "all tasks assigned to User X across projects" relies critically on `idx_task_assignees_user_id`. Without it, queries would fail because the unique constraint only creates an implicit index composite-keyed on `(task_id, user_id)` starting with `task_id`.
 * **High-Volume Join Overhead:** Aggregating global task dashboards at scale requires joining millions of `task_assignees` rows back to `tasks` and `projects`, putting heavy memory pressure on the database without application-level caching or secondary index tuning.
+
+---
+
+## SCHEMA UPDATE: `tasks`
+
+### Migration
+ALTER TABLE tasks ADD COLUMN completed_at TIMESTAMPTZ;
+
+### Purpose
+completed_at (TIMESTAMPTZ): Stores the UTC timestamp at which a task was completed. The column is nullable because incomplete tasks do not have a completion timestamp.
+
+### Bottlenecks at 100x Scale
+Dashboard aggregations currently load visible tasks into memory and aggregate them using Java streams. This is acceptable for a dashboard summary but would become a bottleneck at significantly larger scale.

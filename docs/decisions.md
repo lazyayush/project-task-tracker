@@ -60,3 +60,9 @@
 - **Chose:** Assignee changes use REPLACE semantics, removing the existing assignee and assigning the specified user.
 - **Rejected:** ADD semantics, where the new user would be added alongside existing assignees.
 - **Why:** The bulk actions are all replace-style mutations: a status change sets a new status, a due-date change sets a new due date, and an assignee change naturally means reassigning the task. This also matches the conventional meaning of “bulk reassign” in task-management tools.
+
+## Decision 11
+
+- **Chose:** byStatus includes all tasks, including Done, while byAssignee excludes Done tasks.
+- **Rejected:** Using the same scope for both breakdowns.
+- **Why:** The status breakdown is intended to show the complete task distribution, whereas the assignee breakdown represents current workload. Including completed tasks in the latter would turn it into a historical completion leaderboard rather than a view of active responsibility.

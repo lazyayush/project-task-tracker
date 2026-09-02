@@ -88,3 +88,19 @@ Focused on defining bulk-action semantics, implementing per-task transaction iso
 ### What did you estimate versus what it actually took?
 * **Estimated:** Bulk actions and CSV export would be straightforward by reusing existing task operations and search filters.
 * **Actual:** Took longer due to designing and verifying REQUIRES_NEW transaction isolation, particularly testing persistence rather than relying only on the response.
+
+---
+
+## Phase 6 — Dashboard
+
+### How did you break the work into sessions?
+Focused on fixing completion tracking, defining dashboard metrics and visibility rules, implementing the aggregations, and reviewing scalability.
+
+### What order did you build in, and why that order?
+1. **Completion Tracking:** Added completed_at because updated_at cannot reliably identify when a task was completed. Integrated it into the existing status-transition logic.
+2. **Metric Definitions:** Defined weeks as Monday–Sunday in UTC and clarified assignee counting, including an Unassigned bucket and counting multi-assignee tasks under each assignee.
+3. **Dashboard Implementation:** Built the headline metrics, status and assignee breakdowns, and 8-week completion trend using the existing project-visibility rules.
+
+### What did you estimate versus what it actually took?
+* **Estimated:** Dashboard aggregation would be straightforward after defining the metrics.
+* **Actual:** Took longer due to the required completed_at schema change and testing.

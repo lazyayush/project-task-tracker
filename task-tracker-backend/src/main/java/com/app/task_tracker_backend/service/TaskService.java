@@ -173,13 +173,17 @@ public class TaskService {
             }
             assertNoUnfinishedBlockers(task);
             task.setStatus(newStatus);
-
+            task.setCompletedAt(Instant.now());
         } else {
             if (!TaskTransitionRules.allowedFrom(current).contains(newStatus)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Cannot move from " + current + " to " + newStatus);
             }
+
             task.setStatus(newStatus);
+            if (current == TaskStatus.DONE) {
+                task.setCompletedAt(null);
+            }
         }
 
         task.setUpdatedAt(Instant.now());
