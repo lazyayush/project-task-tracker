@@ -114,3 +114,17 @@ Delivered full project lifecycle and membership APIs (create, update, archive, r
 ### Correction
 Manual testing via Swagger UI caught an authorization flaw where MEMBER users could pass includeArchived=true on GET /api/projects to view archived projects. The issue stemmed from the controller blindly accepting the query parameter without checking caller permissions. Fixed at the controller/service boundary by deriving the flag server-side (effectiveIncludeArchived = isManager && requestedIncludeArchived), enforcing role restrictions regardless of raw request inputs.
 
+
+## 4. Bulk Assignee Change Semantics
+
+### Prompt
+
+Asked whether a bulk “assignee change” should REPLACE all existing assignees on each task or ADD the specified user alongside the existing assignees. The README did not explicitly define the behavior, so the decision was based on the wording and consistency with the other bulk actions.
+
+---
+
+### Output
+
+Implemented assignee changes with REPLACE semantics. The specified user becomes the task's assignee and existing assignments are removed first.
+
+

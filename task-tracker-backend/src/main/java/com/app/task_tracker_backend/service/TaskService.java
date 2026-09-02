@@ -1,11 +1,8 @@
 package com.app.task_tracker_backend.service;
 
-import com.app.task_tracker_backend.dto.PagedResponse;
+import com.app.task_tracker_backend.dto.*;
 import com.app.task_tracker_backend.entity.*;
 import com.app.task_tracker_backend.repositories.*;
-import com.app.task_tracker_backend.dto.CreateTaskRequest;
-import com.app.task_tracker_backend.dto.TaskResponse;
-import com.app.task_tracker_backend.dto.UpdateTaskRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,12 +28,14 @@ public class TaskService {
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskAssigneeRepository taskAssigneeRepository;
     private final UserRepository userRepository;
+    private final TaskBulkActionExecutor taskBulkActionExecutor;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskBlockRepository taskBlockRepository,
             ProjectRepository projectRepository,
-            ProjectMemberRepository projectMemberRepository, TaskAssigneeRepository taskAssigneeRepository, UserRepository userRepository
+            ProjectMemberRepository projectMemberRepository, TaskAssigneeRepository taskAssigneeRepository, UserRepository userRepository,
+            @org.springframework.context.annotation.Lazy TaskBulkActionExecutor taskBulkActionExecutor
     ) {
         this.taskRepository = taskRepository;
         this.taskBlockRepository = taskBlockRepository;
@@ -43,6 +43,7 @@ public class TaskService {
         this.projectMemberRepository = projectMemberRepository;
         this.taskAssigneeRepository = taskAssigneeRepository;
         this.userRepository = userRepository;
+        this.taskBulkActionExecutor = taskBulkActionExecutor;
     }
 
     @Transactional
@@ -277,40 +278,7 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public PagedResponse<TaskResponse> search(TaskSearchCriteria criteria, User currentUser) {
-        boolean isManager = currentUser.getRole().name().equals("MANAGER");
-
-        Specification<Task> spec = Specification.unrestricted();
-
-        if (!isManager) {
-            List<Long> visibleProjectIds = projectMemberRepository.findByUserId(currentUser.getId())
-                    .stream()
-                    .map(pm -> pm.getProject().getId())
-                    .toList();
-
-            spec = spec.and(TaskSpecifications.projectIdIn(visibleProjectIds))
-                    .and(TaskSpecifications.projectNotArchived());
-        } else {
-            spec = spec.and(TaskSpecifications.projectNotArchived());
-        }
-
-        if (criteria.projectId() != null) {
-            spec = spec.and(TaskSpecifications.projectIdEquals(criteria.projectId()));
-        }
-        if (criteria.status() != null) {
-            spec = spec.and(TaskSpecifications.statusEquals(criteria.status()));
-        }
-        if (criteria.priority() != null) {
-            spec = spec.and(TaskSpecifications.priorityEquals(criteria.priority()));
-        }
-        if (criteria.searchTerm() != null && !criteria.searchTerm().isBlank()) {
-            spec = spec.and(TaskSpecifications.titleOrDescriptionContains(criteria.searchTerm()));
-        }
-        if (criteria.assigneeEmail() != null && !criteria.assigneeEmail().isBlank()) {
-            spec = spec.and(TaskSpecifications.assigneeEmailEquals(criteria.assigneeEmail()));
-        }
-        if (criteria.overdueOnly()) {
-            spec = spec.and(TaskSpecifications.isOverdue());
-        }
+        Specification<Task> spec = buildSpecification(criteria, currentUser);
 
         int pageSize = Math.min(Math.max(criteria.size(), 1), 100); // hard cap at 100
         int pageNumber = Math.max(criteria.page(), 0);
@@ -337,6 +305,170 @@ public class TaskService {
                 results.getTotalElements(),
                 results.getTotalPages()
         );
+    }
+
+    @Transactional
+    public void replaceAssignee(Long taskId, String newAssigneeEmail, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertCanManageAssignment(currentUser, task.getProject());
+
+        User newAssignee = userRepository.findByEmail(newAssigneeEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + newAssigneeEmail));
+
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(task.getProject().getId(), newAssignee.getId());
+        if (!isMember) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only members of this project may be assigned to its tasks");
+        }
+
+        // REPLACE semantics: remove every existing assignee on this task first.
+        taskAssigneeRepository.findByTaskId(taskId)
+                .forEach(a -> taskAssigneeRepository.deleteByTaskIdAndUserId(taskId, a.getUser().getId()));
+
+        TaskAssignee assignee = TaskAssignee.builder()
+                .task(task)
+                .user(newAssignee)
+                .assignedAt(Instant.now())
+                .build();
+        taskAssigneeRepository.save(assignee);
+    }
+
+    @Transactional
+    public void updateDueDateOnly(Long taskId, Instant newDueDate, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertManagerIsProjectMember(currentUser, task.getProject()); // due date is metadata — manager-only, per Chunk 8's split
+
+        task.setDueDate(newDueDate);
+        task.setUpdatedAt(Instant.now());
+        taskRepository.save(task);
+    }
+
+    public BulkActionResponse applyBulkAction(BulkActionRequest request, User currentUser) {
+        List<BulkActionResult> results = new ArrayList<>();
+
+        Object newValue = switch (request.actionType()) {
+            case STATUS_CHANGE -> request.newStatus();
+            case ASSIGNEE_CHANGE -> request.newAssigneeEmail();
+            case DUE_DATE_CHANGE -> request.newDueDate();
+        };
+
+        for (Long taskId : request.taskIds()) {
+            try {
+                taskBulkActionExecutor.applyOne(taskId, request.actionType(), newValue, currentUser);
+                results.add(new BulkActionResult(taskId, true, "Success"));
+            } catch (ResponseStatusException e) {
+                results.add(new BulkActionResult(taskId, false, e.getReason()));
+            } catch (Exception e) {
+                results.add(new BulkActionResult(taskId, false, "Unexpected error: " + e.getMessage()));
+            }
+        }
+
+        long succeeded = results.stream().filter(BulkActionResult::success).count();
+
+        return new BulkActionResponse(
+                request.taskIds().size(),
+                (int) succeeded,
+                request.taskIds().size() - (int) succeeded,
+                results
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public String exportFilteredAsCsv(TaskSearchCriteria criteria, User currentUser) {
+        Specification<Task> spec = buildSpecification(criteria, currentUser);
+        List<Task> tasks = taskRepository.findAll(spec);
+
+        StringBuilder csv = new StringBuilder();
+        csv.append("id,project,title,status,priority,dueDate,assignees\n");
+
+        for (Task task : tasks) {
+            String assignees = String.join(";",
+                    taskAssigneeRepository.findByTaskId(task.getId()).stream()
+                            .map(a -> a.getUser().getEmail())
+                            .toList()
+            );
+
+            csv.append(task.getId()).append(",")
+                    .append(escapeCsv(task.getProject().getKey())).append(",")
+                    .append(escapeCsv(task.getTitle())).append(",")
+                    .append(task.getStatus()).append(",")
+                    .append(task.getPriority()).append(",")
+                    .append(task.getDueDate() != null ? task.getDueDate() : "").append(",")
+                    .append(escapeCsv(assignees)).append("\n");
+        }
+
+        return csv.toString();
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
+
+    private Specification<Task> buildSpecification(
+            TaskSearchCriteria criteria,
+            User currentUser
+    ) {
+        boolean isManager = currentUser.getRole().name().equals("MANAGER");
+
+        Specification<Task> spec = Specification.unrestricted();
+
+        if (!isManager) {
+            List<Long> visibleProjectIds = projectMemberRepository
+                    .findByUserId(currentUser.getId())
+                    .stream()
+                    .map(pm -> pm.getProject().getId())
+                    .toList();
+
+            spec = spec
+                    .and(TaskSpecifications.projectIdIn(visibleProjectIds))
+                    .and(TaskSpecifications.projectNotArchived());
+        } else {
+            spec = spec.and(TaskSpecifications.projectNotArchived());
+        }
+
+        if (criteria.projectId() != null) {
+            spec = spec.and(
+                    TaskSpecifications.projectIdEquals(criteria.projectId())
+            );
+        }
+
+        if (criteria.status() != null) {
+            spec = spec.and(
+                    TaskSpecifications.statusEquals(criteria.status())
+            );
+        }
+
+        if (criteria.priority() != null) {
+            spec = spec.and(
+                    TaskSpecifications.priorityEquals(criteria.priority())
+            );
+        }
+
+        if (criteria.searchTerm() != null && !criteria.searchTerm().isBlank()) {
+            spec = spec.and(
+                    TaskSpecifications.titleOrDescriptionContains(
+                            criteria.searchTerm()
+                    )
+            );
+        }
+
+        if (criteria.assigneeEmail() != null
+                && !criteria.assigneeEmail().isBlank()) {
+            spec = spec.and(
+                    TaskSpecifications.assigneeEmailEquals(
+                            criteria.assigneeEmail()
+                    )
+            );
+        }
+
+        if (criteria.overdueOnly()) {
+            spec = spec.and(TaskSpecifications.isOverdue());
+        }
+
+        return spec;
     }
 
     private void assertCanManageAssignment(User user, Project project) {

@@ -54,3 +54,9 @@
 - **Chose:** Task assignments can be managed by either the project owner or any manager who is an explicit member of that project.
 - **Rejected:** Strictly manager-only authority or fully open authority to all project members.
 - **Why:** Assignment directly impacts accountability and user dashboards, making it more sensitive than status updates but less restricted than core metadata edits. It also exercises the owner role separation: allowing non-manager owners to assign work within their own projects without giving open assignment rights to general project members.
+
+## Decision 10
+
+- **Chose:** Assignee changes use REPLACE semantics, removing the existing assignee and assigning the specified user.
+- **Rejected:** ADD semantics, where the new user would be added alongside existing assignees.
+- **Why:** The bulk actions are all replace-style mutations: a status change sets a new status, a due-date change sets a new due date, and an assignee change naturally means reassigning the task. This also matches the conventional meaning of “bulk reassign” in task-management tools.

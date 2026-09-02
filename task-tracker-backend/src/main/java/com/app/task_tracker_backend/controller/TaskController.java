@@ -144,4 +144,30 @@ public class TaskController {
         );
         return taskService.search(criteria, currentUser(authentication));
     }
+
+    @PostMapping("/api/tasks/bulk-action")
+    public BulkActionResponse bulkAction(@Valid @RequestBody BulkActionRequest request, Authentication authentication) {
+        return taskService.applyBulkAction(request, currentUser(authentication));
+    }
+
+    @GetMapping(value = "/api/tasks/export", produces = "text/csv")
+    public ResponseEntity<String> export(
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) String assigneeEmail,
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(defaultValue = "false") boolean overdueOnly,
+            Authentication authentication
+    ) {
+        TaskSearchCriteria criteria = new TaskSearchCriteria(
+                searchTerm, projectId, status, assigneeEmail, priority,
+                overdueOnly, null, null, 0, Integer.MAX_VALUE
+        );
+        String csv = taskService.exportFilteredAsCsv(criteria, currentUser(authentication));
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=tasks_export.csv")
+                .body(csv);
+    }
 }

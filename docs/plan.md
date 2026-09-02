@@ -53,3 +53,38 @@ Phase 3 was executed as a dedicated session focused on establishing the core tas
 ### What did you estimate versus what it actually took?
 * **Estimated:** Building the basic Task/TaskBlock CRUD endpoints went as estimated. However, rigorous testing of edge-case status transitions (reopening tasks, preventing backward moves from IN_REVIEW, and dependency checks) added unexpected time.
 * **Actual:** Took longer than planned due to manual testing edge cases in Swagger, which revealed an authorization bypass flaw (`includeArchived` visibility enforcement) that required refining service-layer authorization logic.
+
+---
+
+## Phase 4 — Search, Filter, Sort, and Pagination
+
+### How did you break the work into sessions?
+Focused on designing dynamic task search, implementing reusable JPA Specifications, adding sorting/pagination, and testing authorization and filter behavior.
+
+### What order did you build in, and why that order?
+1. **Authorization Design:** Defined project visibility rules for members and managers.
+2. **Specification Layer:** Implemented reusable filters for project, status, priority, text search, assignee, and overdue tasks.
+3. **Sorting & Pagination:** Added dynamic sorting and pagination with a page-size cap of 100. Priority sorting uses CASE WHEN to ensure severity order instead of alphabetical order.
+4. **Testing:** Tested filter combinations, text search, overdue behavior, priority sorting, pagination limits, and manager/member visibility.
+
+### What did you estimate versus what it actually took?
+* **Estimated:** Basic filtering, sorting, and pagination were expected to be straightforward.
+* **Actual:** Implementation went largely as planned, with additional attention required for priority ranking and validating authorization boundaries and combined filters.
+
+---
+
+## Phase 5 — Bulk Actions and CSV Export
+
+### How did you break the work into sessions?
+Focused on defining bulk-action semantics, implementing per-task transaction isolation, adding CSV export, and testing partial success and authorization behavior.
+
+### What order did you build in, and why that order?
+1. **Action Semantics:** Defined status, assignee, and due-date changes as replacement-style operations, with assignee changes replacing the existing assignee.
+2. **Transaction Isolation:** Added a separate TaskBulkActionExecutor with REQUIRES_NEW so each task runs in its own transaction. This prevents one failed task from rolling back successful tasks and avoids Spring's self-invocation limitation.
+3. **Bulk Execution:** Kept applyBulkAction() non-transactional so it coordinates independent task operations and records each success or failure.
+4. **CSV Export:** Reused buildSpecification() from search to keep filtering and visibility rules consistent, while exporting all matching tasks without pagination.
+5. **Testing:** Prioritized partial-success tests and re-fetched successful tasks to verify that changes actually persisted. Also tested invalid assignees and CSV filtering/escaping.
+
+### What did you estimate versus what it actually took?
+* **Estimated:** Bulk actions and CSV export would be straightforward by reusing existing task operations and search filters.
+* **Actual:** Took longer due to designing and verifying REQUIRES_NEW transaction isolation, particularly testing persistence rather than relying only on the response.
