@@ -64,9 +64,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError(response.status, message);
   }
 
-  if (response.status === 204) {
+  const text = await response.text();
+  if (!text) {
     return undefined as T;
   }
-
-  return response.json();
+  return JSON.parse(text) as T;
 }

@@ -161,3 +161,15 @@ I built the project list, manager-only create/archive controls, project cards, a
 ### What did you estimate versus what it actually took?
 The phase was completed in the estimated time.
 
+---
+
+## Phase 11 — Project Detail Page
+
+### How did you break the work into sessions?
+I split the work into backend endpoint fixes, project detail UI, membership controls, and final API-client debugging.
+
+### What order did you build in, and why that order?
+I added the missing project and member `GET` endpoints first, then built the detail page with archive/restore, member management, and the task-list placeholder. Finally, I fixed the shared API client so successful no-body responses are handled correctly.
+
+### What did you estimate versus what it actually took?
+I expected most of the work to involve the detail page UI. In practice, additional time was needed to identify the missing backend read endpoints and debug the misleading add-member error caused by the shared API client.

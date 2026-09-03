@@ -161,3 +161,15 @@ Received the required frontend files and structure for the project setup, authen
 The frontend included the Vite/React/TypeScript scaffold, API client, `AuthContext`, protected routes, login/register pages, and dashboard connected to the backend API.
 
 
+## 7. API Client Empty-Body Error
+
+### Prompt
+
+Reported a misleading "could not add member" error where the member was actually added successfully. Requested investigation and a general fix for the issue.
+
+---
+
+### Output
+
+Diagnosed the issue in the shared `apiRequest` function, which assumed empty responses would always use HTTP 204. The add-member endpoint returned HTTP 201 with no response body, causing JSON parsing to fail after a successful request.
+Fixed the API client to detect actual empty response content instead of relying only on the status code. This also prevents the same issue from affecting other no-body endpoints such as member removal and task unassignment.

@@ -69,6 +69,20 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}/members")
+    public List<String> listMembers(@PathVariable Long id, Authentication authentication) {
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        return projectService.listMembers(id, currentUser);
+    }
+
+    @GetMapping("/{id}")
+    public ProjectResponse get(@PathVariable Long id, Authentication authentication) {
+        User currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        return projectService.getVisible(id, currentUser);
+    }
+
     @GetMapping
     public List<ProjectResponse> list(
             @RequestParam(defaultValue = "false") boolean includeArchived,

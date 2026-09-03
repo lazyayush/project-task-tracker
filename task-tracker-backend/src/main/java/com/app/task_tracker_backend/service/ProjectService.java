@@ -159,6 +159,36 @@ public class ProjectService {
         return projects.stream().map(this::toResponse).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<String> listMembers(Long projectId, User currentUser) {
+        Project project = getOrThrow(projectId);
+
+        boolean isManager = currentUser.getRole().name().equals("MANAGER");
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(projectId, currentUser.getId());
+
+        if (!isManager && !isMember) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+        }
+
+        return projectMemberRepository.findByProjectId(projectId).stream()
+                .map(pm -> pm.getUser().getEmail())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectResponse getVisible(Long projectId, User currentUser) {
+        Project project = getOrThrow(projectId);
+
+        boolean isManager = currentUser.getRole().name().equals("MANAGER");
+        boolean isMember = projectMemberRepository.existsByProjectIdAndUserId(projectId, currentUser.getId());
+
+        if (!isManager && !isMember) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+        }
+
+        return toResponse(project);
+    }
+
     private Project getOrThrow(Long projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
