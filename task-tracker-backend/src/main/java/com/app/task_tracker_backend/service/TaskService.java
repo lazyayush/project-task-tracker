@@ -382,6 +382,13 @@ public class TaskService {
         taskRepository.save(task);
     }
 
+    @Transactional(readOnly = true)
+    public Task getTaskVisibleOrThrow(Long taskId, User currentUser) {
+        Task task = getTaskOrThrow(taskId);
+        assertCanView(currentUser, task.getProject());
+        return task;
+    }
+
     public BulkActionResponse applyBulkAction(BulkActionRequest request, User currentUser) {
         List<BulkActionResult> results = new ArrayList<>();
 

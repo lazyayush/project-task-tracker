@@ -11,6 +11,7 @@ import { fetchProjectTasks, type Task } from '../api/tasks';
 import { StatusBadge, PriorityBadge } from '../components/StatusBadge';
 import { TaskStatusControl } from '../components/TaskStatusControl';
 import { CreateTaskForm } from '../components/CreateTaskForm';
+import { TaskDetailModal } from '../components/TaskDetailModal';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export function ProjectDetailPage() {
 
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   function loadTasks() {
     fetchProjectTasks(projectId)
@@ -249,7 +251,8 @@ export function ProjectDetailPage() {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="py-3 flex items-center justify-between gap-3"
+                onClick={() => setSelectedTaskId(task.id)}
+                className="py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-ink/[0.02] transition-colors"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-ink truncate">
@@ -272,15 +275,28 @@ export function ProjectDetailPage() {
                   </div>
                 </div>
 
-                <TaskStatusControl
-                  task={task}
-                  onChanged={handleTaskStatusChanged}
-                />
+                <div onClick={(e) => e.stopPropagation()}>
+                  <TaskStatusControl
+                    task={task}
+                    onChanged={handleTaskStatusChanged}
+                  />
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {selectedTaskId && project && (
+        <TaskDetailModal
+          taskId={selectedTaskId}
+          projectId={project.id}
+          projectOwnerEmail={project.ownerEmail}
+          onClose={() => setSelectedTaskId(null)}
+          onTaskChanged={loadTasks}
+        />
+      )}
     </div>
   );
 }
+

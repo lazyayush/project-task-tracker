@@ -2,6 +2,7 @@ package com.app.task_tracker_backend.controller;
 
 import com.app.task_tracker_backend.dto.*;
 import com.app.task_tracker_backend.entity.Priority;
+import com.app.task_tracker_backend.entity.Task;
 import com.app.task_tracker_backend.entity.TaskStatus;
 import com.app.task_tracker_backend.entity.User;
 import com.app.task_tracker_backend.repositories.UserRepository;
@@ -184,5 +185,12 @@ public class TaskController {
     @GetMapping("/api/tasks/{taskId}/history")
     public List<TaskHistoryResponse> getHistory(@PathVariable Long taskId, Authentication authentication) {
         return taskService.getHistory(taskId, currentUser(authentication));
+    }
+
+    @GetMapping("/api/tasks/{taskId}")
+    public TaskResponse getTask(@PathVariable Long taskId, Authentication authentication) {
+        User currentUser = currentUser(authentication);
+        Task task = taskService.getTaskVisibleOrThrow(taskId, currentUser); // see below
+        return taskService.toResponse(task);
     }
 }

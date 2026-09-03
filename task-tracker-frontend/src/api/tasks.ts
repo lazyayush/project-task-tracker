@@ -40,3 +40,23 @@ export function fetchLegalTransitions(taskId: number): Promise<TaskStatus[]> {
 export function transitionTaskStatus(taskId: number, status: TaskStatus): Promise<Task> {
   return apiRequest<Task>(`/api/tasks/${taskId}/status`, { method: 'PATCH', body: { status } });
 }
+
+export function fetchTask(taskId: number): Promise<Task> {
+  return apiRequest<Task>(`/api/tasks/${taskId}`);
+}
+
+export function addBlocker(taskId: number, blockingTaskId: number): Promise<void> {
+  return apiRequest<void>(`/api/tasks/${taskId}/blockers`, { method: 'POST', body: { blockingTaskId } });
+}
+
+export function removeBlocker(taskId: number, blockingTaskId: number): Promise<void> {
+  return apiRequest<void>(`/api/tasks/${taskId}/blockers/${blockingTaskId}`, { method: 'DELETE' });
+}
+
+export function assignUser(taskId: number, userEmail: string): Promise<void> {
+  return apiRequest<void>(`/api/tasks/${taskId}/assignees`, { method: 'POST', body: { userEmail } });
+}
+
+export function unassignUser(taskId: number, userEmail: string): Promise<void> {
+  return apiRequest<void>(`/api/tasks/${taskId}/assignees`, { method: 'DELETE', body: { userEmail } });
+}
