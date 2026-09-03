@@ -7,6 +7,7 @@ import {
 import { StatusBadge, PriorityBadge } from './StatusBadge';
 import { TaskStatusControl } from './TaskStatusControl';
 import { ApiError } from '../api/client';
+import { TaskHistoryPanel } from './TaskHistoryPanel';
 
 interface Props {
   taskId: number;
@@ -210,10 +211,7 @@ export function TaskDetailModal({ taskId, projectId, projectOwnerEmail, onClose,
               )}
             </div>
 
-            <div className="bg-white border border-line rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-ink mb-1">History &amp; comments</h3>
-              <p className="text-sm text-ink-soft">Coming in the next chunk.</p>
-            </div>
+            <TaskHistoryPanel taskId={taskId} />
           </>
         )}
       </div>
