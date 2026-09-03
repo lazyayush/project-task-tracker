@@ -3,6 +3,7 @@ import { NavLink, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../api/client';
 import { DashboardPage } from '../pages/DashboardPage';
+import { ProjectsPage } from '../pages/ProjectsPage';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -53,6 +54,7 @@ export function Layout() {
         <Routes>
           {/* Feature routes added in later chunks */}
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
         </Routes>
       </main>
     </div>

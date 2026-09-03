@@ -147,3 +147,17 @@ I followed the dependency order: project setup → API client → authentication
 
 ### What did you estimate versus what it actually took?
 I expected most of the time to go toward feature development. In practice, debugging Tailwind/Vite issues, fixing UI inconsistencies, and refining the design took more time than expected.
+
+---
+
+## Phase 10 — Projects List Page
+
+### How did you break the work into sessions?
+I split the work into the project list UI, manager-only controls, reusable components, and final UI refinement.
+
+### What order did you build in, and why that order?
+I built the project list, manager-only create/archive controls, project cards, and the reusable `Badge` component. This followed the existing frontend structure and prepared the UI for the upcoming project detail and task features.
+
+### What did you estimate versus what it actually took?
+The phase was completed in the estimated time.
+
