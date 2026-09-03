@@ -145,3 +145,19 @@ Initially recommended personal-only alerts because they were simpler and avoided
 ### Correction
 Re-read the brief and realized managers need portfolio-wide visibility to answer questions like “what is overdue?” and “who is overloaded?”. Revised the design to portfolio/project-scoped alerts, while keeping dismissal restricted to the viewer’s own assignments.
 
+
+## 6. Overdue Alerts Design
+
+### Prompt
+
+Requested the frontend project setup with Vite/React/TypeScript, routing, authentication, API client, and dashboard.
+
+---
+
+### Output
+
+Received the required frontend files and structure for the project setup, authentication flow, and dashboard implementation.
+
+The frontend included the Vite/React/TypeScript scaffold, API client, `AuthContext`, protected routes, login/register pages, and dashboard connected to the backend API.
+
+

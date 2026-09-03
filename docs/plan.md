@@ -134,3 +134,16 @@ Focused on resolving alert-scope ambiguity, building dismissals and reset behavi
 
 ### What did you estimate versus what it actually took?
 The phase required more iteration than initially expected because the alert-scope decision was reversed mid-phase. 
+
+---
+
+## Phase 9 — Frontend(Authentication and Dashboard)
+
+### How did you break the work into sessions?
+I split the work into setup, authentication, UI/design, dashboard development, and final bug-fixing/refinement sessions.
+
+### What order did you build in, and why that order?
+I followed the dependency order: project setup → API client → authentication → routing → design system → dashboard → refinement. This ensured each layer was ready before building features that depended on it.
+
+### What did you estimate versus what it actually took?
+I expected most of the time to go toward feature development. In practice, debugging Tailwind/Vite issues, fixing UI inconsistencies, and refining the design took more time than expected.
