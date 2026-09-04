@@ -60,3 +60,7 @@ export function assignUser(taskId: number, userEmail: string): Promise<void> {
 export function unassignUser(taskId: number, userEmail: string): Promise<void> {
   return apiRequest<void>(`/api/tasks/${taskId}/assignees`, { method: 'DELETE', body: { userEmail } });
 }
+
+export function fetchMyTasks(): Promise<Task[]> {
+  return apiRequest<Task[]>('/api/me/tasks');
+}

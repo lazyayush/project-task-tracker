@@ -4,26 +4,24 @@ import {
   fetchTask, fetchProjectTasks, addBlocker, removeBlocker, assignUser, unassignUser,
   type Task,
 } from '../api/tasks';
+import { fetchProject } from '../api/projects';
 import { StatusBadge, PriorityBadge } from './StatusBadge';
 import { TaskStatusControl } from './TaskStatusControl';
-import { ApiError } from '../api/client';
 import { TaskHistoryPanel } from './TaskHistoryPanel';
+import { ApiError } from '../api/client';
 
 interface Props {
   taskId: number;
-  projectId: number;
-  projectOwnerEmail: string;
   onClose: () => void;
   onTaskChanged: () => void;
 }
 
-export function TaskDetailModal({ taskId, projectId, projectOwnerEmail, onClose, onTaskChanged }: Props) {
+export function TaskDetailModal({ taskId, onClose, onTaskChanged }: Props) {
   const { user } = useAuth();
   const isManager = user?.role === 'MANAGER';
-  const isOwner = user?.email === projectOwnerEmail;
-  const canManageAssignment = isManager || isOwner;
 
   const [task, setTask] = useState<Task | null>(null);
+  const [projectOwnerEmail, setProjectOwnerEmail] = useState<string | null>(null);
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
   const [newAssigneeEmail, setNewAssigneeEmail] = useState('');
   const [selectedBlockerId, setSelectedBlockerId] = useState('');
@@ -35,8 +33,16 @@ export function TaskDetailModal({ taskId, projectId, projectOwnerEmail, onClose,
 
   useEffect(() => {
     reload();
-    fetchProjectTasks(projectId).then(setProjectTasks).catch(() => setProjectTasks([]));
-  }, [taskId, projectId]);
+  }, [taskId]);
+
+  useEffect(() => {
+    if (!task) return;
+    fetchProject(task.projectId).then((p) => setProjectOwnerEmail(p.ownerEmail)).catch(() => {});
+    fetchProjectTasks(task.projectId).then(setProjectTasks).catch(() => setProjectTasks([]));
+  }, [task?.projectId]);
+
+  const isOwner = user?.email === projectOwnerEmail;
+  const canManageAssignment = isManager || isOwner;
 
   function handleStatusChanged(updated: Task) {
     setTask(updated);
@@ -89,8 +95,9 @@ export function TaskDetailModal({ taskId, projectId, projectOwnerEmail, onClose,
     }
   }
 
-  const otherTasks = projectTasks.filter((t) => t.id !== taskId);
-  const blockerCandidates = otherTasks.filter((t) => !task?.blockingTaskIds.includes(t.id));
+  const blockerCandidates = projectTasks.filter(
+    (t) => t.id !== taskId && !task?.blockingTaskIds.includes(t.id)
+  );
 
   return (
     <div className="fixed inset-0 bg-ink/40 flex items-center justify-end z-50" onClick={onClose}>

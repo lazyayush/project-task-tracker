@@ -5,6 +5,7 @@ import { apiRequest } from '../api/client';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage';
+import { MyTasksPage } from '../pages/MyTasksPage';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -57,6 +58,7 @@ export function Layout() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/my-tasks" element={<MyTasksPage />} />
         </Routes>
       </main>
     </div>

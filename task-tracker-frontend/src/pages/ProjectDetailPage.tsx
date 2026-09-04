@@ -287,11 +287,9 @@ export function ProjectDetailPage() {
         )}
       </div>
 
-      {selectedTaskId && project && (
+      {selectedTaskId && (
         <TaskDetailModal
           taskId={selectedTaskId}
-          projectId={project.id}
-          projectOwnerEmail={project.ownerEmail}
           onClose={() => setSelectedTaskId(null)}
           onTaskChanged={loadTasks}
         />
