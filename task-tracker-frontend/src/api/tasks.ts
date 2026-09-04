@@ -25,6 +25,13 @@ export interface CreateTaskRequest {
   dueDate: string | null;
 }
 
+export interface UpdateTaskRequest {
+  title: string;
+  description: string | null;
+  priority: Priority;
+  dueDate: string | null;
+}
+
 export function fetchProjectTasks(projectId: number): Promise<Task[]> {
   return apiRequest<Task[]>(`/api/projects/${projectId}/tasks`);
 }
@@ -63,4 +70,8 @@ export function unassignUser(taskId: number, userEmail: string): Promise<void> {
 
 export function fetchMyTasks(): Promise<Task[]> {
   return apiRequest<Task[]>('/api/me/tasks');
+}
+
+export function updateTask(taskId: number, request: UpdateTaskRequest): Promise<Task> {
+  return apiRequest<Task>(`/api/tasks/${taskId}`, { method: 'PUT', body: request });
 }

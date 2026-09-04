@@ -9,6 +9,7 @@ import { StatusBadge, PriorityBadge } from './StatusBadge';
 import { TaskStatusControl } from './TaskStatusControl';
 import { TaskHistoryPanel } from './TaskHistoryPanel';
 import { ApiError } from '../api/client';
+import { updateTask, type UpdateTaskRequest } from '../api/tasks';
 
 interface Props {
   taskId: number;
@@ -26,6 +27,11 @@ export function TaskDetailModal({ taskId, onClose, onTaskChanged }: Props) {
   const [newAssigneeEmail, setNewAssigneeEmail] = useState('');
   const [selectedBlockerId, setSelectedBlockerId] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPriority, setEditPriority] = useState<Task['priority']>('MEDIUM');
+  const [editDueDate, setEditDueDate] = useState('');
 
   function reload() {
     fetchTask(taskId).then(setTask).catch(() => setError('Could not load task.'));
@@ -95,6 +101,34 @@ export function TaskDetailModal({ taskId, onClose, onTaskChanged }: Props) {
     }
   }
 
+  function startEditing() {
+    if (!task) return;
+    setEditTitle(task.title);
+    setEditDescription(task.description ?? '');
+    setEditPriority(task.priority);
+    setEditDueDate(task.dueDate ? task.dueDate.slice(0, 16) : ''); // trims to "YYYY-MM-DDTHH:mm" for the input
+    setIsEditing(true);
+  }
+
+  async function handleSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      const request: UpdateTaskRequest = {
+        title: editTitle,
+        description: editDescription || null,
+        priority: editPriority,
+        dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+      };
+      const updated = await updateTask(taskId, request);
+      setTask(updated);
+      setIsEditing(false);
+      onTaskChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save changes');
+    }
+  }
+
   const blockerCandidates = projectTasks.filter(
     (t) => t.id !== taskId && !task?.blockingTaskIds.includes(t.id)
   );
@@ -113,14 +147,67 @@ export function TaskDetailModal({ taskId, onClose, onTaskChanged }: Props) {
           <p className="text-ink-soft">Loading…</p>
         ) : (
           <>
-            <div>
-              <h2 className="font-display text-xl font-semibold text-ink">{task.title}</h2>
-              {task.description && <p className="text-sm text-ink-soft mt-2">{task.description}</p>}
-              <div className="flex items-center gap-2 mt-3">
-                <StatusBadge status={task.status} />
-                <PriorityBadge priority={task.priority} />
+            {isEditing ? (
+              <form onSubmit={handleSaveEdit} className="flex flex-col gap-3">
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="font-display text-lg font-semibold border border-line rounded-lg px-3 py-2 text-ink focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  required
+                />
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Description"
+                  className="border border-line rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+                />
+                <div className="flex gap-3">
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value as Task['priority'])}
+                    className="flex-1 border border-line rounded-lg px-3 py-2 text-sm text-ink bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                  <input
+                    type="datetime-local"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="flex-1 border border-line rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors">
+                    Save
+                  </button>
+                  <button type="button" onClick={() => setIsEditing(false)} className="text-sm text-ink-soft hover:text-ink px-4 py-2">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-display text-xl font-semibold text-ink">{task.title}</h2>
+                  {isManager && (
+                    <button onClick={startEditing} className="text-xs font-medium text-primary hover:underline shrink-0">
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {task.description && <p className="text-sm text-ink-soft mt-2">{task.description}</p>}
+                <div className="flex items-center gap-2 mt-3">
+                  <StatusBadge status={task.status} />
+                  <PriorityBadge priority={task.priority} />
+                  {task.dueDate && (
+                    <span className="text-xs text-ink-soft">Due {new Date(task.dueDate).toLocaleDateString()}</span>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <h3 className="text-sm font-semibold text-ink-soft mb-2">Status</h3>

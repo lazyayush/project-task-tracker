@@ -7,14 +7,31 @@ const FIELD_LABELS: Record<string, string> = {
   dueDate: 'Due date', status: 'Status', assignee: 'Assignee',
 };
 
+function formatHistoryValue(fieldName: string | null, value: string | null): string {
+  if (value === null) return '—';
+
+  if (fieldName === 'dueDate') {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value;
+    return date.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
+  return value;
+}
+
 function describeEntry(entry: HistoryEntry): string {
   const field = entry.fieldName ? (FIELD_LABELS[entry.fieldName] ?? entry.fieldName) : '';
+  const oldVal = formatHistoryValue(entry.fieldName, entry.oldValue);
+  const newVal = formatHistoryValue(entry.fieldName, entry.newValue);
 
   switch (entry.eventType) {
     case 'CREATED':
       return 'created this task';
     case 'FIELD_CHANGED':
-      return `changed ${field} from "${entry.oldValue ?? '—'}" to "${entry.newValue ?? '—'}"`;
+      return `changed ${field} from "${oldVal}" to "${newVal}"`;
     case 'ASSIGNED':
       return `assigned ${entry.newValue}`;
     case 'UNASSIGNED':

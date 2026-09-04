@@ -6,6 +6,7 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage';
 import { MyTasksPage } from '../pages/MyTasksPage';
+import { AlertsPage } from '../pages/AlertsPage';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -54,11 +55,11 @@ export function Layout() {
       </nav>
       <main className="p-6">
         <Routes>
-          {/* Feature routes added in later chunks */}
           <Route path="/" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/my-tasks" element={<MyTasksPage />} />
+          <Route path="/alerts" element={<AlertsPage />} />
         </Routes>
       </main>
     </div>
