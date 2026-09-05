@@ -50,12 +50,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (response.status === 401) {
-    setToken(null);
-    window.location.href = '/login';
-    throw new ApiError(401, 'Session expired');
-  }
-
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
     try {
@@ -64,6 +58,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     } catch {
       // response wasn't JSON — keep the generic message
     }
+
+    if (response.status === 401 && token) {
+      setToken(null);
+      window.location.href = '/login';
+    }
+
     throw new ApiError(response.status, message);
   }
 
@@ -71,5 +71,6 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!text) {
     return undefined as T;
   }
+
   return JSON.parse(text) as T;
 }
