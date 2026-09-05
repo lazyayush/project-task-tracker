@@ -1,5 +1,87 @@
 # Schema
 
+```mermaid
+erDiagram
+  USERS ||--o{ PROJECTS : owns
+  USERS ||--o{ PROJECT_MEMBERS : "is member via"
+  PROJECTS ||--o{ PROJECT_MEMBERS : has
+  PROJECTS ||--o{ TASKS : contains
+  TASKS ||--o{ TASK_BLOCKS : "blocked_by (as blocking_task)"
+  TASKS ||--o{ TASK_BLOCKS : "blocks (as blocked_task)"
+  TASKS ||--o{ TASK_ASSIGNEES : has
+  USERS ||--o{ TASK_ASSIGNEES : "assigned via"
+  TASKS ||--o{ TASK_HISTORY : has
+  USERS ||--o{ TASK_HISTORY : "acted via (actor)"
+  TASKS ||--o{ ALERT_DISMISSALS : has
+  USERS ||--o{ ALERT_DISMISSALS : "dismissed via"
+
+  USERS {
+    bigint id PK
+    varchar email UK
+    varchar password_hash
+    varchar role
+    timestamptz created_at
+  }
+  PROJECTS {
+    bigint id PK
+    varchar project_key UK
+    varchar name
+    text description
+    bigint owner_id FK
+    boolean archived
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  PROJECT_MEMBERS {
+    bigint id PK
+    bigint project_id FK
+    bigint user_id FK
+    timestamptz joined_at
+  }
+  TASKS {
+    bigint id PK
+    bigint project_id FK
+    varchar title
+    text description
+    varchar priority
+    timestamptz due_date
+    varchar status
+    varchar blocked_from_status
+    timestamptz completed_at
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  TASK_BLOCKS {
+    bigint id PK
+    bigint blocking_task_id FK
+    bigint blocked_task_id FK
+    timestamptz created_at
+  }
+  TASK_ASSIGNEES {
+    bigint id PK
+    bigint task_id FK
+    bigint user_id FK
+    timestamptz assigned_at
+  }
+  TASK_HISTORY {
+    bigint id PK
+    bigint task_id FK
+    bigint actor_id FK
+    varchar event_type
+    varchar field_name
+    text old_value
+    text new_value
+    text comment_text
+    timestamptz created_at
+  }
+  ALERT_DISMISSALS {
+    bigint id PK
+    bigint task_id FK
+    bigint user_id FK
+    timestamptz dismissed_at
+  }
+```
+
 ## Table: `users`
 
 ### Columns & Data Types

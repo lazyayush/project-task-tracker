@@ -146,7 +146,7 @@ Initially recommended personal-only alerts because they were simpler and avoided
 Re-read the brief and realized managers need portfolio-wide visibility to answer questions like “what is overdue?” and “who is overloaded?”. Revised the design to portfolio/project-scoped alerts, while keeping dismissal restricted to the viewer’s own assignments.
 
 
-## 6. Overdue Alerts Design
+## 6. Frontend - Authentication & Dashboard
 
 ### Prompt
 
@@ -173,3 +173,4 @@ Reported a misleading "could not add member" error where the member was actually
 
 Diagnosed the issue in the shared `apiRequest` function, which assumed empty responses would always use HTTP 204. The add-member endpoint returned HTTP 201 with no response body, causing JSON parsing to fail after a successful request.
 Fixed the API client to detect actual empty response content instead of relying only on the status code. This also prevents the same issue from affecting other no-body endpoints such as member removal and task unassignment.
+

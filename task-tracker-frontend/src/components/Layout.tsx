@@ -7,6 +7,7 @@ import { ProjectsPage } from '../pages/ProjectsPage';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage';
 import { MyTasksPage } from '../pages/MyTasksPage';
 import { AlertsPage } from '../pages/AlertsPage';
+import { SearchPage } from '../pages/SearchPage';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -42,6 +43,7 @@ export function Layout() {
                 )}
               </span>
             </NavLink>
+            <NavLink to="/search" className={navLinkClass}>Search</NavLink>
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm">
@@ -60,6 +62,7 @@ export function Layout() {
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/my-tasks" element={<MyTasksPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
+          <Route path="/search" element={<SearchPage />} />
         </Routes>
       </main>
     </div>

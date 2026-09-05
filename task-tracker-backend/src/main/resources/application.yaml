@@ -3,9 +3,9 @@ spring:
     name: task-tracker-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/tasktracker
-    username: tasktracker
-    password: tasktracker
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tasktracker}
+    username: ${SPRING_DATASOURCE_USERNAME:tasktracker}
+    password: ${SPRING_DATASOURCE_PASSWORD:tasktracker}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -21,7 +21,7 @@ spring:
     locations: classpath:db/migration
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 jwt:
   secret: ${JWT_SECRET:dev-only-change-me-this-is-a-placeholder-secret-key-32bytes+}
