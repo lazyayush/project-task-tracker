@@ -7,8 +7,8 @@
 
 ## Notes for the reviewer
 
-- The backend runs on Render's free tier, which sleeps after 15 minutes of inactivity — a cold start
-  can take 30-60 seconds. Please wait a moment on first load rather than assuming it's broken.
+- The backend runs on Render's free tier and sleeps after 15 minutes of inactivity. A GitHub Actions workflow pings /health every 10 minutes to keep it warm, but after a deploy or extended inactivity, the first request may still take 30–60 seconds. 
+  Please wait a moment on the first load rather than assuming the application is broken.
 - The database is hosted on Supabase's free tier rather than Render's, since Render's free Postgres
   expires (and its data is deleted) after 30 days — chosen specifically so this stays reachable for
   review beyond a short window.
